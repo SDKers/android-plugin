@@ -1,0 +1,2 @@
+include ':method_hook'
+rootProject.name = "plugin"
