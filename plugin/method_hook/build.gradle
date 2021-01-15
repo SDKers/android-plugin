@@ -18,7 +18,7 @@ gradlePlugin {
             // 在 app 模块需要通过 id 引用这个插件
             id = 'method-hook'
             // 实现这个插件的类的路径
-            implementationClass = 'com.wallstreetcn.autotrack.AutoTrackPlugin'
+            implementationClass = 'com.miqt.asm.method_hook.MyPlugin'
         }
     }
 }
