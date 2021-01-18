@@ -9,13 +9,17 @@ import com.android.build.api.transform.Transform;
 import com.android.build.api.transform.TransformException;
 import com.android.build.api.transform.TransformInput;
 import com.android.build.api.transform.TransformInvocation;
+import com.android.build.gradle.AppExtension;
+import com.android.build.gradle.BaseExtension;
+import com.android.build.gradle.LibraryExtension;
 import com.android.build.gradle.internal.pipeline.TransformManager;
 import com.google.common.collect.Sets;
-import com.miqt.asm.method_hook.utils.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,15 +32,41 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
-public abstract class BaseTransForm extends Transform {
-    Project project;
-    Logger logger;
-    boolean islib = false;
 
+public abstract class BasePlugin<E extends Extension> extends Transform implements Plugin<Project> {
 
-    public BaseTransForm(Project project) {
+    private Project project;
+    private boolean isApp = true;
+
+    private Logger logger;
+
+    @Override
+    public void apply(@NotNull Project project) {
         this.project = project;
+        BaseExtension android = (BaseExtension) project.getExtensions().getByName("android");
+        if (android instanceof AppExtension) {
+            isApp = true;
+        } else if (android instanceof LibraryExtension) {
+            isApp = false;
+        }
+
+        E e = getExtension();
+
         logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
+
+        project.getExtensions().create(e.getExtensionName(), e.getClass());
+        android.registerTransform(this);
+
+    }
+
+    public abstract E getExtension();
+
+    public Project getProject() {
+        return project;
+    }
+
+    public boolean isApp() {
+        return isApp;
     }
 
     public Logger getLogger() {
@@ -55,7 +85,7 @@ public abstract class BaseTransForm extends Transform {
 
     @Override
     public Set<? super QualifiedContent.Scope> getScopes() {
-        if (islib) {
+        if (isApp) {
             return Sets.immutableEnumSet(
                     QualifiedContent.Scope.PROJECT);
         } else {
@@ -65,7 +95,7 @@ public abstract class BaseTransForm extends Transform {
 
     @Override
     public boolean isIncremental() {
-        return false;
+        return true;
     }
 
 
@@ -73,20 +103,13 @@ public abstract class BaseTransForm extends Transform {
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         super.transform(transformInvocation);
         logger.init();
-
         boolean isIncremental = transformInvocation.isIncremental();
-
-        project.getLogger().warn("增量编译：" + isIncremental);
-        project.getLogger().warn("buildType：" + transformInvocation.getContext().getVariantName());
-
         //如果非增量，则清空旧的输出内容
         if (!isIncremental) {
             transformInvocation.getOutputProvider().deleteAll();
         }
-
         Collection<TransformInput> inputs = transformInvocation.getInputs();
         inputs.forEach(transformInput -> {
-
             transformInput.getDirectoryInputs().forEach(directoryInput -> {
                 eachDir(transformInvocation, isIncremental, directoryInput);
             });
@@ -122,7 +145,7 @@ public abstract class BaseTransForm extends Transform {
                 jarOutputStream.putNextEntry(outJarEntry);
                 byte[] modifiedClassBytes = null;
                 byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
-                logger.log("\t"+name);
+                logger.log("\t" + name);
                 if (name.endsWith(".class")) {
                     try {
                         modifiedClassBytes = transformJar(sourceClassBytes, jarName);
@@ -202,7 +225,7 @@ public abstract class BaseTransForm extends Transform {
         }
     }
 
-    abstract byte[] transform(byte[] classBytes);
+    public abstract byte[] transform(byte[] classBytes);
 
-    abstract byte[] transformJar(byte[] classBytes, String jarName);
+    public abstract byte[] transformJar(byte[] classBytes, String jarName);
 }

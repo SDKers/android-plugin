@@ -10,15 +10,7 @@ dependencies {
     implementation localGroovy()
     implementation 'com.android.tools.build:gradle:3.6.3'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation project(':base_plugin')
 }
 
-gradlePlugin {
-    plugins {
-        version {
-            // 在 app 模块需要通过 id 引用这个插件
-            id = 'method-hook'
-            // 实现这个插件的类的路径
-            implementationClass = 'com.miqt.asm.method_hook.MyPlugin'
-        }
-    }
-}
+

@@ -1,0 +1,13 @@
+apply plugin: 'groovy'
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'java-gradle-plugin'
+apply from: "../maven.gradle"
+
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    implementation 'com.android.tools.build:gradle:3.6.3'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+}

@@ -1,4 +1,4 @@
-package com.miqt.asm.method_hook.utils;
+package com.miqt.asm.method_hook;
 
 import org.apache.commons.io.FileUtils;
 
@@ -20,7 +20,7 @@ public class Logger {
         this.name = name;
     }
 
-    public void init() {
+    void init() {
         try {
             File file = new File(dir);
             if (!file.exists() || !file.isDirectory()) {
@@ -39,7 +39,7 @@ public class Logger {
         }
     }
 
-    public void release() {
+    void release() {
         if (writer == null) {
             return;
         }

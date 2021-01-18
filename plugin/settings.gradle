@@ -1,2 +1,3 @@
-include ':method_hook'
+include ':base_plugin'
+include ':hook-method-plugin'
 rootProject.name = "plugin"
