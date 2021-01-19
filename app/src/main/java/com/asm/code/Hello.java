@@ -11,6 +11,7 @@ public class Hello {
         Thread.getAllStackTraces();
         Thread.getAllStackTraces();
         Thread.getAllStackTraces();
+        Thread.getAllStackTraces();
     }
 
 }

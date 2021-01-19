@@ -19,12 +19,16 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.internal.impldep.org.joda.time.DateTimeUtils;
+import org.gradle.internal.time.Time;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -39,10 +43,12 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     private boolean isApp = true;
 
     private Logger logger;
+    private E extension;
 
     @Override
     public void apply(@NotNull Project project) {
         this.project = project;
+        logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
         BaseExtension android = (BaseExtension) project.getExtensions().getByName("android");
         if (android instanceof AppExtension) {
             isApp = true;
@@ -50,16 +56,19 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
             isApp = false;
         }
 
-        E e = getExtension();
+        E e = initExtension();
 
-        logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
-
-        project.getExtensions().create(e.getExtensionName(), e.getClass());
+        extension = (E) project.getExtensions().create(e.getExtensionName(), e.getClass());
         android.registerTransform(this);
+
 
     }
 
-    public abstract E getExtension();
+    public abstract E initExtension();
+
+    public E getExtension() {
+        return extension;
+    }
 
     public Project getProject() {
         return project;
@@ -71,11 +80,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
     public Logger getLogger() {
         return logger;
-    }
-
-    @Override
-    public String getName() {
-        return "auto_track";
     }
 
     @Override
@@ -104,6 +108,14 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
         super.transform(transformInvocation);
         logger.init();
         boolean isIncremental = transformInvocation.isIncremental();
+
+        logger.log("ProjectName: " + transformInvocation.getContext().getProjectName());
+        logger.log("ProjectPath: " + transformInvocation.getContext().getPath());
+        logger.log("BuildType  : " + transformInvocation.getContext().getVariantName());
+        logger.log("Incremental: " + isIncremental);
+        logger.log("Time       : " + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()));
+        logger.log("----------------------------------------------------------------");
+
         //如果非增量，则清空旧的输出内容
         if (!isIncremental) {
             transformInvocation.getOutputProvider().deleteAll();
@@ -123,7 +135,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
     private void eachJar(TransformInvocation transformInvocation, JarInput jarInput) {
         try {
-            getLogger().log("[jar] " + jarInput.getName() + " " + jarInput.getStatus().name());
             String jarName = jarInput.getName();
             File file = jarInput.getFile();
             File temDir = transformInvocation.getContext().getTemporaryDir();
@@ -145,7 +156,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                 jarOutputStream.putNextEntry(outJarEntry);
                 byte[] modifiedClassBytes = null;
                 byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
-                logger.log("\t" + name);
                 if (name.endsWith(".class")) {
                     try {
                         modifiedClassBytes = transformJar(sourceClassBytes, jarName);
@@ -197,12 +207,11 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                                 break;
                             }
                             byte[] bytes = FileUtils.readFileToByteArray(file);
-                            logger.log("[class] " + file.getName());
                             try {
                                 byte[] resultBytes = transform(bytes);
                                 FileUtils.writeByteArrayToFile(file, resultBytes);
                             } catch (Throwable e) {
-                                e.printStackTrace();
+                                logger.log(e);
                             }
                             break;
 
@@ -217,7 +226,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                 com.android.utils.FileUtils.getAllFiles(directoryInput.getFile()).forEach(file -> {
                     biConsumer.accept(file, Status.CHANGED);
                 });
-
             }
             FileUtils.copyDirectory(directoryInput.getFile(), dest);
         } catch (IOException e) {
