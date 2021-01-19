@@ -1,8 +1,10 @@
+Android 字节码插件集合，base_plugin 封装好了增量编译等编写插件重复代码，使后续开发只需要关注对字节码的操作
+
 基于base-plugin开发新插件步骤：
 
 1. plugin 目录下创建新module
 
-   ![image-20210119111706251](.\images\image-20210119111706251.png)
+   ![image-20210119111706251](./images/image-20210119111706251.png)
 
 2. 编辑新module 的 build.gradle 文件
 
@@ -53,13 +55,13 @@
 
 4. 创建 resources 文件夹和属性文件注册这个插件
 
-   ![image-20210119112443231](.\images\image-20210119112443231.png)
+   ![image-20210119112443231](./images/image-20210119112443231.png)
 
 5. 在项目根目录的build.gradle引用插件
 
    ```groovy
    plugins {
-       // 这个 id 就是在 .\plugin\demo-plugin 文件夹下 build.gradle 文件内定义的id
+       // 这个 id 就是在 ./plugin/demo-plugin 文件夹下 build.gradle 文件内定义的id
        id "demo-plugin" apply false
    }
    ```
