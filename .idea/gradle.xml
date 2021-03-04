@@ -11,7 +11,7 @@
                 <projects>
                   <project path="$PROJECT_DIR$/plugin" />
                   <project path="$PROJECT_DIR$/plugin/base_plugin" />
-                  <project path="$PROJECT_DIR$/plugin/hook-method-plugin" />
+                  <project path="$PROJECT_DIR$/plugin/sample-plugin" />
                 </projects>
               </build>
             </builds>
@@ -28,7 +28,7 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/plugin" />
             <option value="$PROJECT_DIR$/plugin/base_plugin" />
-            <option value="$PROJECT_DIR$/plugin/hook-method-plugin" />
+            <option value="$PROJECT_DIR$/plugin/sample-plugin" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

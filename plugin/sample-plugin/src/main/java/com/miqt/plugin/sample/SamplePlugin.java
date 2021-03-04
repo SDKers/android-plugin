@@ -1,4 +1,4 @@
-package com.miqt.asm.hook_method_plugin;
+package com.miqt.plugin.sample;
 
 import com.miqt.asm.method_hook.BasePlugin;
 
@@ -11,10 +11,10 @@ import java.util.function.Consumer;
 
 import static org.objectweb.asm.ClassReader.EXPAND_FRAMES;
 
-public class MyPlugin extends BasePlugin<ConfigExtension> {
+public class SamplePlugin extends BasePlugin<SampleExtension> {
     @Override
-    public ConfigExtension initExtension() {
-        return new ConfigExtension();
+    public SampleExtension initExtension() {
+        return new SampleExtension();
     }
 
     @Override

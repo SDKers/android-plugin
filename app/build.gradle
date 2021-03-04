@@ -3,7 +3,7 @@ plugins {
     id 'kotlin-android'
 }
 
-apply plugin: 'com.miqt.asm.methodhook'
+apply plugin: 'com.miqt.plugin.sample'
 
 android {
     compileSdkVersion 30

@@ -1,8 +1,8 @@
-package com.miqt.asm.hook_method_plugin;
+package com.miqt.plugin.sample;
 
 import com.miqt.asm.method_hook.Extension;
 
-public class ConfigExtension extends Extension {
+public class SampleExtension extends Extension {
 
     @Override
     public String getExtensionName() {

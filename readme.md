@@ -1,6 +1,10 @@
-Android 字节码插件集合，base_plugin 封装好了增量编译等编写插件重复代码，使后续开发只需要关注对字节码的操作
+Android 字节码插件集合，base_plugin 封装好了增量编译等编写插件重复代码，这样后续开发只需要关注对字节码的操作
+
+可以认为是ByteX的简单版本。
 
 基于base-plugin开发新插件步骤：
+
+可以直接参考 sample-plugin。
 
 1. plugin 目录下创建新module
 
@@ -17,7 +21,7 @@ Android 字节码插件集合，base_plugin 封装好了增量编译等编写插
                // 在 app 模块需要通过 id 引用这个插件
                id = 'demo-plugin'
                // 实现这个插件的类的路径
-               implementationClass = 'com.miqt.asm.hook_method_plugin.MyPlugin'
+               implementationClass = 'com.miqt.plugin.sample.SamplePlugin'
            }
        }
    }
@@ -26,11 +30,7 @@ Android 字节码插件集合，base_plugin 封装好了增量编译等编写插
 3. 创建自定义 Plugin 继承自 BasePlugin 并实现抽象接口
 
    ```java
-   package com.miqt.asm.hook_method_plugin;
-   
-   import com.miqt.asm.method_hook.BasePlugin;
-   
-   public class plugin extends BasePlugin<ConfigExtension> {
+   public class SamplePlugin extends BasePlugin<SampleExtension> {
        @Override
        public ConfigExtension initExtension() {
            return new ConfigExtension();
@@ -57,7 +57,7 @@ Android 字节码插件集合，base_plugin 封装好了增量编译等编写插
 
    ![image-20210119112443231](./images/image-20210119112443231.png)
 
-5. 在项目根目录的build.gradle引用插件
+5. 在项目根目录的build.gradle引用插件，也可以发布后直接maven引用。
 
    ```groovy
    plugins {
@@ -69,7 +69,7 @@ Android 字节码插件集合，base_plugin 封装好了增量编译等编写插
 6. 在App module 中使用插件
 
    ```groovy
-   apply plugin: 'com.miqt.asm.demo-plugin'
+   apply plugin: 'com.miqt.plugin.sample'
    ```
 
 7. 完成
@@ -78,5 +78,5 @@ Android 字节码插件集合，base_plugin 封装好了增量编译等编写插
 >
 > 断点调试插件方法：https://miqt.github.io/2020/12/29/plugin-debug/
 >
-> Android Studio 字节码插件：[ASM Bytecode Viewer](https://plugins.jetbrains.com/plugin/14860-asm-bytecode-viewer-support-kotlin)
+> Android Studio 字节码查看插件：[ASM Bytecode Viewer](https://plugins.jetbrains.com/plugin/14860-asm-bytecode-viewer-support-kotlin)
 
