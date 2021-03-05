@@ -7,7 +7,9 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.io.File;
 import java.util.function.Consumer;
+import java.util.jar.JarEntry;
 
 import static org.objectweb.asm.ClassReader.EXPAND_FRAMES;
 
@@ -18,7 +20,7 @@ public class SamplePlugin extends BasePlugin<SampleExtension> {
     }
 
     @Override
-    public byte[] transform(byte[] classBytes) {
+    public byte[] transform(byte[] classBytes, File file) {
         ClassReader reader = new ClassReader(classBytes);
         getLogger().log(reader.getClassName());
         ClassNode node = new ClassNode();
@@ -39,7 +41,7 @@ public class SamplePlugin extends BasePlugin<SampleExtension> {
     }
 
     @Override
-    public byte[] transformJar(byte[] classBytes, String jarName) {
+    public byte[] transformJar(byte[] classBytes, File file, JarEntry entry) {
         ClassReader reader = new ClassReader(classBytes);
         getLogger().log(reader.getClassName());
         ClassNode node = new ClassNode();

@@ -6,6 +6,11 @@ plugins {
 apply plugin: 'com.miqt.plugin.hookmethod'
 apply plugin: 'com.miqt.plugin.sample'
 
+hook_method {
+    enable = true
+    all = true
+}
+
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.2"

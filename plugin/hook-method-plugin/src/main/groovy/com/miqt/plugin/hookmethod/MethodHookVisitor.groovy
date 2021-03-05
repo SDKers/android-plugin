@@ -1,4 +1,4 @@
-package com.analysys.plugin
+package com.miqt.plugin.hookmethod
 
 
 import org.gradle.api.Project
@@ -9,31 +9,23 @@ import java.util.regex.Pattern
 
 class MethodHookVisitor extends ClassVisitor {
 
-    String className = null
+    private String className = null
+    private HookMethodExtension config
+    private Project project
+    private HookMethodPlugin plugin
+    private boolean isIgnoreMethodHook = false
 
-    MethodHookConfig config
-    Project project
-
-    MappingPrinter mappingPrinter
-    boolean isIgnoreMethodHook = false
-
-    MethodHookVisitor(ClassVisitor classVisitor, MethodHookConfig config, Project project) {
+    public MethodHookVisitor(ClassVisitor classVisitor, HookMethodPlugin plugin) {
         super(Opcodes.ASM5, classVisitor)
-        this.config = config
-        this.project = project
-        if (config.isMapping()) {
-            mappingPrinter = new MappingPrinter(new File(project.getBuildDir(), "/outputs/mapping/methodHook_mapping.txt"))
-        }
+        this.config = plugin.getExtension()
+        this.project = plugin.getProject()
+        this.plugin = plugin;
     }
 
-
     @Override
-    void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         super.visit(version, access, name, signature, superName, interfaces)
         className = name.replace("/", ".")
-        if (config.isMapping()) {
-            mappingPrinter.log("[CLASSNAME]" + className + name)
-        }
     }
 
     @Override
@@ -117,7 +109,7 @@ class MethodHookVisitor extends ClassVisitor {
                                 ")V",
                         false)
                 if (config.isMapping()) {
-                    mappingPrinter.log("\t[MethodEnter]" + className + name)
+                    plugin.getLogger().log("\t[MethodEnter]" + className + name)
                 }
                 super.onMethodEnter()
             }
@@ -147,7 +139,7 @@ class MethodHookVisitor extends ClassVisitor {
                                     ")V",
                             false)
                     if (config.isMapping()) {
-                        mappingPrinter.log("\t[MethodExit]" + className + name)
+                        plugin.getLogger().log("\t[MethodExit]" + className + name)
                     }
                 } else if (opcode == RETURN) {
                     mv.visitInsn(ACONST_NULL)
@@ -165,7 +157,7 @@ class MethodHookVisitor extends ClassVisitor {
                                     ")V",
                             false)
                     if (config.isMapping()) {
-                        mappingPrinter.log("\t[MethodExit]" + className + name)
+                        plugin.getLogger().log("\t[MethodExit]" + className + name)
                     }
                 }
 

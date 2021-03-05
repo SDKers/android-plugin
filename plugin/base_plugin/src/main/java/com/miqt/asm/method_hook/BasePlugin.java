@@ -19,8 +19,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.internal.impldep.org.joda.time.DateTimeUtils;
-import org.gradle.internal.time.Time;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -158,7 +156,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                 byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
                 if (name.endsWith(".class")) {
                     try {
-                        modifiedClassBytes = transformJar(sourceClassBytes, jarName);
+                        modifiedClassBytes = transformJar(sourceClassBytes, file, entry);
                     } catch (Throwable e) {
                         e.printStackTrace();
                         modifiedClassBytes = sourceClassBytes;
@@ -208,7 +206,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                             }
                             byte[] bytes = FileUtils.readFileToByteArray(file);
                             try {
-                                byte[] resultBytes = transform(bytes);
+                                byte[] resultBytes = transform(bytes, file);
                                 FileUtils.writeByteArrayToFile(file, resultBytes);
                             } catch (Throwable e) {
                                 logger.log(e);
@@ -233,7 +231,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
         }
     }
 
-    public abstract byte[] transform(byte[] classBytes);
+    public abstract byte[] transform(byte[] classBytes, File classFile);
 
-    public abstract byte[] transformJar(byte[] classBytes, String jarName);
+    public abstract byte[] transformJar(byte[] classBytes, File jarFile, JarEntry entry);
 }
