@@ -3,6 +3,9 @@ package com.miqt.plugin.hookmethod;
 import com.miqt.asm.method_hook.BasePlugin;
 
 import org.apache.http.util.TextUtils;
+import org.gradle.api.Action;
+import org.gradle.api.Project;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -17,6 +20,17 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     @Override
     public HookMethodExtension initExtension() {
         return new HookMethodExtension();
+    }
+
+    @Override
+    public void apply(@NotNull Project project) {
+        super.apply(project);
+        project.afterEvaluate(new Action<Project>() {
+            @Override
+            public void execute(Project project) {
+                project.getDependencies().add("implementation","me.miqt.plugin.tools:pluginlib:0.2.2");
+            }
+        });
     }
 
     @Override

@@ -47,6 +47,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     public void apply(@NotNull Project project) {
         this.project = project;
         logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
+        logger.init();
         BaseExtension android = (BaseExtension) project.getExtensions().getByName("android");
         if (android instanceof AppExtension) {
             isApp = true;
@@ -104,7 +105,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         super.transform(transformInvocation);
-        logger.init();
         boolean isIncremental = transformInvocation.isIncremental();
 
         logger.log("ProjectName: " + transformInvocation.getContext().getProjectName());
