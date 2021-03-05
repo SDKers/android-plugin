@@ -1,4 +1,4 @@
-package com.miqt.plugin.sample;
+package com.miqt.plugin.hookmethod;
 
 import com.miqt.asm.method_hook.BasePlugin;
 
@@ -61,6 +61,6 @@ public class SamplePlugin extends BasePlugin<SampleExtension> {
 
     @Override
     public String getName() {
-        return "sample-plugin";
+        return "hook-method-plugin";
     }
 }

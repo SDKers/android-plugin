@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
 }
 
+apply plugin: 'com.miqt.plugin.hookmethod'
 apply plugin: 'com.miqt.plugin.sample'
 
 android {
