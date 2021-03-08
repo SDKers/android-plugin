@@ -88,7 +88,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
     @Override
     public Set<? super QualifiedContent.Scope> getScopes() {
-        if (isApp) {
+        if (!isApp) {
             return Sets.immutableEnumSet(
                     QualifiedContent.Scope.PROJECT);
         } else {

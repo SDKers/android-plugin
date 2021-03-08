@@ -25,17 +25,14 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     @Override
     public void apply(@NotNull Project project) {
         super.apply(project);
-        project.afterEvaluate(new Action<Project>() {
-            @Override
-            public void execute(Project project) {
-                project.getDependencies().add("implementation","me.miqt.plugin.tools:pluginlib:0.2.2");
-            }
-        });
     }
 
     @Override
     public byte[] transform(byte[] classBytes, File classFile) {
         String name = classFile.getName();
+        if(classFile.getAbsolutePath().contains(getExtension().getImpl().replace(".",File.separator))){
+            return classBytes;
+        }
         if (name.endsWith(".class") && !name.startsWith("R$") &&
                 !"R.class".equals(name) && !"BuildConfig.class".equals(name)) {
             getLogger().log("[class]" + classFile.getName());
@@ -50,8 +47,11 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
 
     @Override
     public byte[] transformJar(byte[] classBytes, File jarFile, JarEntry entry) {
+        if(entry.getName().contains(getExtension().getImpl().replace(".","/"))){
+            return classBytes;
+        }
         if (!TextUtils.isEmpty(getExtension().getImpl())
-                && jarFile.getName().contains(":pluginlib")
+                && jarFile.getName().contains("pluginlib")
                 && entry.getName().equals("com/miqt/pluginlib/tools/MethodHookHandler.class")) {
             try {
                 getLogger().log("[dump]" + jarFile.getName() + ":" + entry.getName());
@@ -61,7 +61,7 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
                 return classBytes;
             }
         }
-
+//        getLogger().info("[transformJar]" + jarFile.getName() + ":" + entry.getName());
         for (int i = 0; i < getExtension().getJarRegexs().size(); i++) {
             String regexStr = getExtension().getJarRegexs().get(i);
             boolean isM = Pattern.matches(regexStr, jarFile.getName());
