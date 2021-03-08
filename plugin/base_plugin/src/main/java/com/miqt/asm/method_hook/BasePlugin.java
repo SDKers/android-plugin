@@ -47,7 +47,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     public void apply(@NotNull Project project) {
         this.project = project;
         logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
-        logger.init();
         BaseExtension android = (BaseExtension) project.getExtensions().getByName("android");
         if (android instanceof AppExtension) {
             isApp = true;
@@ -59,7 +58,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
         extension = (E) project.getExtensions().create(e.getExtensionName(), e.getClass());
         android.registerTransform(this);
-
 
     }
 
@@ -104,30 +102,35 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
-        super.transform(transformInvocation);
-        boolean isIncremental = transformInvocation.isIncremental();
+        logger.init();
+        try {
+            super.transform(transformInvocation);
+            boolean isIncremental = transformInvocation.isIncremental();
 
-        logger.log("ProjectName: " + transformInvocation.getContext().getProjectName());
-        logger.log("ProjectPath: " + transformInvocation.getContext().getPath());
-        logger.log("BuildType  : " + transformInvocation.getContext().getVariantName());
-        logger.log("Incremental: " + isIncremental);
-        logger.log("Time       : " + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()));
-        logger.log("----------------------------------------------------------------");
+            logger.log("ProjectName: " + transformInvocation.getContext().getProjectName());
+            logger.log("ProjectPath: " + transformInvocation.getContext().getPath());
+            logger.log("BuildType  : " + transformInvocation.getContext().getVariantName());
+            logger.log("Incremental: " + isIncremental);
+            logger.log("Time       : " + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()));
+            logger.log("----------------------------------------------------------------");
 
-        //如果非增量，则清空旧的输出内容
-        if (!isIncremental) {
-            transformInvocation.getOutputProvider().deleteAll();
+            //如果非增量，则清空旧的输出内容
+            if (!isIncremental) {
+                transformInvocation.getOutputProvider().deleteAll();
+            }
+            Collection<TransformInput> inputs = transformInvocation.getInputs();
+            inputs.forEach(transformInput -> {
+                transformInput.getDirectoryInputs().forEach(directoryInput -> {
+                    eachDir(transformInvocation, isIncremental, directoryInput);
+                });
+                transformInput.getJarInputs().forEach(jarInput -> {
+                    eachJar(transformInvocation, jarInput);
+                });
+            });
+        } catch (Throwable e) {
+            e.printStackTrace();
+            logger.log(e);
         }
-        Collection<TransformInput> inputs = transformInvocation.getInputs();
-        inputs.forEach(transformInput -> {
-            transformInput.getDirectoryInputs().forEach(directoryInput -> {
-                eachDir(transformInvocation, isIncremental, directoryInput);
-            });
-            transformInput.getJarInputs().forEach(jarInput -> {
-                eachJar(transformInvocation, jarInput);
-            });
-        });
-
         logger.release();
     }
 

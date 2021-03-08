@@ -74,11 +74,6 @@ public class Logger {
         }
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        release();
-    }
 
     public void log(Throwable throwable) {
         try {

@@ -21,12 +21,6 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     public HookMethodExtension initExtension() {
         return new HookMethodExtension();
     }
-
-    @Override
-    public void apply(@NotNull Project project) {
-        super.apply(project);
-    }
-
     @Override
     public byte[] transform(byte[] classBytes, File classFile) {
         String name = classFile.getName();

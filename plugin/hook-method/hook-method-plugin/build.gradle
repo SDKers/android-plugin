@@ -1,4 +1,4 @@
-apply from: "../plugin.gradle"
+apply from: "../../plugin.gradle"
 
 gradlePlugin {
     plugins {

@@ -1,4 +1,5 @@
 include ':base_plugin'
 include ':sample-plugin'
 include ':hook-method-plugin'
+project(':hook-method-plugin').projectDir = new File('hook-method/hook-method-plugin')
 rootProject.name = "plugin"
