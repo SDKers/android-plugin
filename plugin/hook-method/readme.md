@@ -110,6 +110,12 @@ dependencies {
 }
 ```
 
+如果编译不通过，请添加maven仓库：
+
+```
+maven {url 'https://dl.bintray.com/miqingtang/maven'}
+```
+
 接入完成build后可以查看：build\plugin 目录找到对应的日志输出。有问题欢迎提交 issues.
 
 >  这个插件是借鉴了很多大佬的代码，并结合自己的想法进行了一些调整，在此感谢他们付出的努力。
