@@ -15,7 +15,7 @@ public class HookMethodExtension extends Extension {
     //是否打印日志
     public  boolean log = true;
     //是否保存mapping
-    public  boolean mapping = true;
+    public boolean mapping = true;
     //jar包 名称 正则表达式,不设置默认不插桩jar包
     public List<String> jarRegexs = new ArrayList<>();
     //类名称 正则表达式,class全名
@@ -25,6 +25,7 @@ public class HookMethodExtension extends Extension {
     //是否用插桩后的jar包替换项目中的jar包
     public boolean replaceJar = false;
     public String impl = "";
+
 
     public boolean isEnable() {
         return enable;

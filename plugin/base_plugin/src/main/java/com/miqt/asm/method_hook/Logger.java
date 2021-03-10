@@ -32,7 +32,7 @@ public class Logger {
             File logFile = new File(dir, name);
             // 删除旧的日志文件
             try {
-                if (file.exists()) {
+                if (logFile.exists()) {
                     FileUtils.forceDelete(logFile);
                 }
             } catch (IOException e) {

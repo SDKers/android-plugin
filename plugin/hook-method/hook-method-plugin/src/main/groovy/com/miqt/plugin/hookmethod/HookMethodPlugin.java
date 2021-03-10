@@ -1,16 +1,15 @@
 package com.miqt.plugin.hookmethod;
 
+import com.android.build.api.transform.TransformException;
+import com.android.build.api.transform.TransformInvocation;
 import com.miqt.asm.method_hook.BasePlugin;
 
 import org.apache.http.util.TextUtils;
-import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.jar.JarEntry;
 import java.util.regex.Pattern;
 
@@ -21,12 +20,21 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     public HookMethodExtension initExtension() {
         return new HookMethodExtension();
     }
+
+    @Override
+    public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
+
+        super.transform(transformInvocation);
+    }
+
     @Override
     public byte[] transform(byte[] classBytes, File classFile) {
         String name = classFile.getName();
-        if(classFile.getAbsolutePath().contains(getExtension().getImpl().replace(".",File.separator))){
+        if (!TextUtils.isEmpty(getExtension().getImpl()) &&
+                classFile.getAbsolutePath().contains(getExtension().getImpl().replace(".", File.separator))) {
             return classBytes;
         }
+        getLogger().log("[transform class]" + classFile.getName());
         if (name.endsWith(".class") && !name.startsWith("R$") &&
                 !"R.class".equals(name) && !"BuildConfig.class".equals(name)) {
             getLogger().log("[class]" + classFile.getName());
@@ -40,12 +48,20 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     }
 
     @Override
+    public boolean isIncremental() {
+        return false;
+    }
+
+    @Override
     public byte[] transformJar(byte[] classBytes, File jarFile, JarEntry entry) {
-        if(entry.getName().contains(getExtension().getImpl().replace(".","/"))){
+        //如果是impl类，直接跳过
+        if (!TextUtils.isEmpty(getExtension().getImpl()) &&
+                entry.getName().contains(getExtension().getImpl().replace(".", "/"))) {
             return classBytes;
         }
+        //如果有impl，替换处理实现类
         if (!TextUtils.isEmpty(getExtension().getImpl())
-                && jarFile.getName().contains("pluginlib")
+                && jarFile.getName().contains("hook-method-lib")
                 && entry.getName().equals("com/miqt/pluginlib/tools/MethodHookHandler.class")) {
             try {
                 getLogger().log("[dump]" + jarFile.getName() + ":" + entry.getName());

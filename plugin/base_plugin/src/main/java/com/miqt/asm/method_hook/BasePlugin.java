@@ -103,6 +103,13 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         logger.init();
+        if (getExtension().justDebug) {
+            String vn = transformInvocation.getContext().getVariantName();
+            if (!"debug".equals(vn)) {
+                logger.log("Current build is "+vn+" type,[justDebug] not work in this.");
+                return;
+            }
+        }
         try {
             super.transform(transformInvocation);
             boolean isIncremental = transformInvocation.isIncremental();
@@ -196,6 +203,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                     String destDirPath = dest.getAbsolutePath();
                     String destFilePath = file.getAbsolutePath().replace(srcDirPath, destDirPath);
                     File destFile = new File(destFilePath);
+                    getLogger().log(file.getName()+":"+status);
                     switch (status) {
                         case NOTCHANGED:
                             break;

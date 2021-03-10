@@ -9,7 +9,9 @@ apply plugin: 'com.miqt.plugin.sample'
 hook_method {
     enable = true
     all = true
-    impl = "com.asm.code.Hello"
+    impl = "com.asm.code.MethodHookPrint"
+    justDebug = true
+//    jarRegexs = [".*"]
 }
 
 android {
