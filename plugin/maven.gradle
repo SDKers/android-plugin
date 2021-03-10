@@ -35,6 +35,6 @@ publish {
     groupId = maven_groupId//jcenter上的路径
     artifactId = maven_artifactId//项目名称
     publishVersion = maven_version//版本号
-    desc = 'https://github.com/miqt/PluginTools/readme.md'
-    website = 'https://github.com/miqt/PluginTools'//网站，不重要
+    desc = 'https://github.com/miqt/android-plugin/tree/master/plugin'
+    website = 'https://github.com/miqt/android-plugin/tree/master/plugin'//网站，不重要
 }
