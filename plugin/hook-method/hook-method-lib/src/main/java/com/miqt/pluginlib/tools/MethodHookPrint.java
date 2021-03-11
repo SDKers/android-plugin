@@ -3,9 +3,12 @@ package com.miqt.pluginlib.tools;
 import android.os.SystemClock;
 import android.util.Log;
 
+import com.miqt.pluginlib.annotation.IgnoreMethodHook;
+
 import java.util.Arrays;
 import java.util.Stack;
 
+@IgnoreMethodHook
 public class MethodHookPrint implements IMethodHookHandler {
     private final ThreadLocal<Stack<Long>> local = new ThreadLocal<>();
 
@@ -26,7 +29,6 @@ public class MethodHookPrint implements IMethodHookHandler {
 
     @Override
     public void onMethodReturn(Object returnObj, Object thisObj, String className, String methodName, String argsType, String returnType, Object... args) {
-
         Stack<Long> queue = local.get();
         assert queue != null;
         Long time = queue.pop();

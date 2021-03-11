@@ -30,19 +30,14 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     @Override
     public byte[] transform(byte[] classBytes, File classFile) {
         String name = classFile.getName();
-        if (!TextUtils.isEmpty(getExtension().getImpl()) &&
-                classFile.getAbsolutePath().contains(getExtension().getImpl().replace(".", File.separator))) {
+        if (!TextUtils.isEmpty(getExtension().impl) &&
+                classFile.getAbsolutePath().contains(getExtension().impl.replace(".", File.separator))) {
             return classBytes;
         }
-        getLogger().log("[transform class]" + classFile.getName());
         if (name.endsWith(".class") && !name.startsWith("R$") &&
                 !"R.class".equals(name) && !"BuildConfig.class".equals(name)) {
             getLogger().log("[class]" + classFile.getName());
-            ClassReader cr = new ClassReader(classBytes);
-            ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-            MethodHookVisitor cv = new MethodHookVisitor(cw, this);
-            cr.accept(cv, EXPAND_FRAMES);
-            return cw.toByteArray();
+            return processClass(classBytes);
         }
         return classBytes;
     }
@@ -55,36 +50,36 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     @Override
     public byte[] transformJar(byte[] classBytes, File jarFile, JarEntry entry) {
         //如果是impl类，直接跳过
-        if (!TextUtils.isEmpty(getExtension().getImpl()) &&
-                entry.getName().contains(getExtension().getImpl().replace(".", "/"))) {
+        if (!TextUtils.isEmpty(getExtension().impl) &&
+                entry.getName().contains(getExtension().impl.replace(".", "/"))) {
             return classBytes;
         }
-        //如果有impl，替换处理实现类
-        if (!TextUtils.isEmpty(getExtension().getImpl())
-                && jarFile.getName().contains("hook-method-lib")
-                && entry.getName().equals("com/miqt/pluginlib/tools/MethodHookHandler.class")) {
-            try {
-                getLogger().log("[dump]" + jarFile.getName() + ":" + entry.getName());
-                return DumpClazz.dump(getExtension().getImpl());
-            } catch (Exception e) {
-                getLogger().log(e);
-                return classBytes;
+        getLogger().log("[jar class]" + jarFile.getName() + ":" + entry.getName());
+        //跳过自己的类库
+        if(entry.getName().contains("com/miqt/pluginlib/")){
+            //如果有impl，替换处理实现类
+            if (!TextUtils.isEmpty(getExtension().impl)
+                    && entry.getName().equals("com/miqt/pluginlib/tools/MethodHookHandler.class")) {
+                try {
+                    getLogger().log("[dump impl]" + jarFile.getName() + ":" + entry.getName());
+                    return DumpClazz.dump(getExtension().impl);
+                } catch (Exception e) {
+                    getLogger().log(e);
+                    return classBytes;
+                }
             }
+            return classBytes;
         }
-//        getLogger().info("[transformJar]" + jarFile.getName() + ":" + entry.getName());
-        for (int i = 0; i < getExtension().getJarRegexs().size(); i++) {
-            String regexStr = getExtension().getJarRegexs().get(i);
-            boolean isM = Pattern.matches(regexStr, jarFile.getName());
-            if (isM) {
-                getLogger().log("[Jar]" + jarFile.getName() + ":" + entry.getName());
-                ClassReader cr = new ClassReader(classBytes);
-                ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
-                MethodHookVisitor cv = new MethodHookVisitor(cw, this);
-                cr.accept(cv, EXPAND_FRAMES);
-                return cw.toByteArray();
-            }
-        }
-        return classBytes;
+        //注解+正则判断是否插桩
+        return processClass(classBytes);
+    }
+
+    private byte[] processClass(byte[] classBytes) {
+        ClassReader cr = new ClassReader(classBytes);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+        MethodHookVisitor cv = new MethodHookVisitor(cw, this);
+        cr.accept(cv, EXPAND_FRAMES);
+        return cw.toByteArray();
     }
 
     @Override

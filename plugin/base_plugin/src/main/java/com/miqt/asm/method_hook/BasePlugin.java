@@ -56,9 +56,9 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
         E e = initExtension();
 
-        extension = (E) project.getExtensions().create(e.getExtensionName(), e.getClass());
+        project.getExtensions().create(e.getExtensionName(), e.getClass());
+        extension = (E) project.getExtensions().getByType(e.getClass());
         android.registerTransform(this);
-
     }
 
     public abstract E initExtension();
@@ -103,10 +103,16 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         logger.init();
+        if (!getExtension().enable) {
+            logger.log(getName() + " not enable!");
+            logger.release();
+            return;
+        }
         if (getExtension().justDebug) {
             String vn = transformInvocation.getContext().getVariantName();
             if (!"debug".equals(vn)) {
-                logger.log("Current build is "+vn+" type,[justDebug] not work in this.");
+                logger.log("Current build is " + vn + " type,[justDebug] not work in this.");
+                logger.release();
                 return;
             }
         }
@@ -151,6 +157,11 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                     jarInput.getContentTypes(),
                     jarInput.getScopes(),
                     Format.JAR);
+
+            if (!getExtension().injectJar) {
+                FileUtils.copyFile(file, dest);
+                return;
+            }
 
             JarFile jarFile = new JarFile(file);
             File temJar = new File(temDir, file.getName());

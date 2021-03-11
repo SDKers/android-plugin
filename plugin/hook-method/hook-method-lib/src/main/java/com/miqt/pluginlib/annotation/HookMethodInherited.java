@@ -8,13 +8,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 如果希望被基层，请使用 HookMethodInherited
+ * 可以被继承，但接口和抽象方法无效
  * 作用于方法和class
- * 优先级：IgnoreMethodHook > HookMethod = HookMethodInherited
  * @author miqt
  */
 @Documented
 @Retention(RetentionPolicy.CLASS)
 @Target({ElementType.TYPE, ElementType.METHOD})
-public @interface HookMethod {
+@Inherited
+public @interface HookMethodInherited {
 }

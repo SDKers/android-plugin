@@ -69,7 +69,7 @@ public int add(int num1, int num2) throws InterruptedException {
 
 ```groovy
 dependencies {
-    classpath 'com.miqt:hook-method-plugin:0.2.9-bate'
+    classpath 'com.miqt:hook-method-plugin:0.3.5'
 }
 ```
 
@@ -78,35 +78,24 @@ dependencies {
 ```groovy
 apply plugin: 'com.miqt.plugin.hookmethod'
 hook_method {
+    //插桩白名单正则 .* 匹配所有
+    classWhiteListRegex = [".*"]
+    //是否关注jar包
+    injectJar = false
+    //是否启用
     enable = true
-    all = true
-    
-    //下面是非必要配置，无特殊需求可直接删除
-    只在debug编译时进行插桩
-    justDebug = true
-    //指定插桩那些外部引用的jar，默认空，表示只对项目中的class插桩
-    jarRegexs = [".*androidx.*"]
-    //指定插桩那些类文件，默认空
-    classRegexs = [".*view.*"]
-    //所有包含 on 的方法,所有构造方法
-    methodRegexs = [".*on.*", ".*init.*"]
-    //编译时是否打印log
-    log = true
-    //是否用插桩后的jar包替换项目中的jar包，慎用
-    replaceJar = false
-    //是否生成详细mapping文件
-    mapping = true
-    //自定义方法统计实现类,不指定默认使用自带实现方式
-    impl = "com.miqt.plugindemo.MyTimeP"
+    //是否只是在debug运行时启用
+    justDebug = false
+    //自定义 hook method 接受类
+    //impl = "com.xxx.xxx"
 }
-
 ```
 
 添加类库依赖：
 
 ```groovy
 dependencies {
-    implementation 'com.miqt:hook-method-lib:0.2.9-bate'
+    implementation 'com.miqt:hook-method-lib:0.3.5'
 }
 ```
 

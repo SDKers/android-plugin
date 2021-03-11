@@ -1,7 +1,10 @@
 package com.asm.code
 
 import android.os.Bundle
+import androidx.annotation.MainThread
 import androidx.appcompat.app.AppCompatActivity
+import com.miqt.pluginlib.annotation.HookMethod
+import com.miqt.pluginlib.annotation.IgnoreMethodHook
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +38,9 @@ class MainActivity : AppCompatActivity() {
         case3()
     }
 
+    @HookMethod
+    @IgnoreMethodHook
+    @MainThread
     fun case1() {
 
     }

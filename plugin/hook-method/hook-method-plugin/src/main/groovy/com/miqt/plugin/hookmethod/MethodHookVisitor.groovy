@@ -14,6 +14,7 @@ class MethodHookVisitor extends ClassVisitor {
     private Project project
     private HookMethodPlugin plugin
     private boolean isIgnoreMethodHook = false
+    private boolean isMethodHookClass = false
 
     public MethodHookVisitor(ClassVisitor classVisitor, HookMethodPlugin plugin) {
         super(Opcodes.ASM5, classVisitor)
@@ -30,7 +31,13 @@ class MethodHookVisitor extends ClassVisitor {
 
     @Override
     AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-        isIgnoreMethodHook = descriptor == "Lcom/miqt/pluginlib/annotation/IgnoreMethodHook;"
+        if (descriptor == "Lcom/miqt/pluginlib/annotation/IgnoreMethodHook;") {
+            isIgnoreMethodHook = true
+        } else if (descriptor == "Lcom/miqt/pluginlib/annotation/HookMethod;") {
+            isMethodHookClass = true
+        } else if (descriptor == "Lcom/miqt/pluginlib/annotation/HookMethodInherited;") {
+            isMethodHookClass = true
+        }
         return super.visitAnnotation(descriptor, visible)
     }
 
@@ -59,37 +66,24 @@ class MethodHookVisitor extends ClassVisitor {
             AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 if ("Lcom/miqt/pluginlib/annotation/HookMethod;" == desc) {
                     inject = true
+                } else if ("Lcom/miqt/pluginlib/annotation/HookMethodInherited;" == desc) {
+                    inject = true
                 } else if ("Lcom/miqt/pluginlib/annotation/IgnoreMethodHook;" == desc) {
                     inject = false
                 }
                 return super.visitAnnotation(desc, visible)
             }
 
+            //优先级 是否启用，注解，类名白名单
             private boolean isInject() {
-                if (!config.isEnable()) {
-                    return false
-                }
-                if (config.isAll()) {
+                if (inject || isMethodHookClass) {
                     return true
                 }
-                if (inject) {
-                    return true
-                }
-                for (String value : config.getClassRegexs()) {
+                for (String value : config.classWhiteListRegex) {
                     if (Pattern.matches(value, className)) {
-                        for (String mname : config.getMethodRegexs()) {
-                            if (Pattern.matches(mname, name)) {
-                                return true
-                            }
-                        }
+                        return true
                     }
                 }
-//                for (String value : config.getMethodRegexs()) {
-//                    if (Pattern.matches(value, name)) {
-//                        return true;
-//                    }
-//                }
-
                 return false
             }
 
@@ -108,9 +102,7 @@ class MethodHookVisitor extends ClassVisitor {
                                 "[Ljava/lang/Object;" +
                                 ")V",
                         false)
-                if (config.isMapping()) {
-                    plugin.getLogger().log("\t[MethodEnter]" + className + name)
-                }
+                plugin.getLogger().log("\t[MethodEnter]" + className + name)
                 super.onMethodEnter()
             }
 
@@ -138,9 +130,7 @@ class MethodHookVisitor extends ClassVisitor {
                                     "[Ljava/lang/Object;" +//prams
                                     ")V",
                             false)
-                    if (config.isMapping()) {
                         plugin.getLogger().log("\t[MethodExit]" + className + name)
-                    }
                 } else if (opcode == RETURN) {
                     mv.visitInsn(ACONST_NULL)
                     getArgs()
@@ -156,9 +146,7 @@ class MethodHookVisitor extends ClassVisitor {
                                     "[Ljava/lang/Object;" +//prams
                                     ")V",
                             false)
-                    if (config.isMapping()) {
                         plugin.getLogger().log("\t[MethodExit]" + className + name)
-                    }
                 }
 
 
