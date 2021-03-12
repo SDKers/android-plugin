@@ -13,6 +13,7 @@ import com.android.build.gradle.AppExtension;
 import com.android.build.gradle.BaseExtension;
 import com.android.build.gradle.LibraryExtension;
 import com.android.build.gradle.internal.pipeline.TransformManager;
+import com.android.ide.common.internal.WaitableExecutor;
 import com.google.common.collect.Sets;
 
 import org.apache.commons.io.FileUtils;
@@ -29,6 +30,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -44,6 +46,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
     private Logger logger;
     private E extension;
+    private WaitableExecutor waitableExecutor;
 
     @Override
     public void apply(@NotNull Project project) {
@@ -55,12 +58,13 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
         } else if (android instanceof LibraryExtension) {
             isApp = false;
         }
-
         E e = initExtension();
-
         project.getExtensions().create(e.getExtensionName(), e.getClass());
         extension = (E) project.getExtensions().getByType(e.getClass());
         android.registerTransform(this);
+        if (waitableExecutor == null) {
+            waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool();
+        }
     }
 
     public abstract E initExtension();
@@ -105,24 +109,17 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         logger.init();
+        logger.log("多线程编译已经打开，目前并发处理数：" + waitableExecutor.getParallelism());
         try {
             beginTransform(transformInvocation);
-        } catch (Throwable e) {
-            e.printStackTrace();
-            logger.log(e);
-        }
-        try {
             doTransform(transformInvocation);
-        } catch (Throwable e) {
-            e.printStackTrace();
-            logger.log(e);
-        }
-        try {
             afterTransform(transformInvocation);
         } catch (Throwable e) {
             e.printStackTrace();
             logger.log(e);
         }
+
+        waitableExecutor.waitForAllTasks();
         logger.release();
     }
 
@@ -213,11 +210,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                             pr.mkdirs();
                         }
                     }
-                    //不遍历jar，则直接退出
-                    if (!getExtension().injectJar) {
-                        FileUtils.copyFile(file, dest);
-                        break;
-                    }
+
                     weaveSingleJarToFile(file, dest);
                     break;
             }
@@ -227,39 +220,49 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     }
 
     private void weaveSingleJarToFile(File file, File dest) throws IOException {
-        if (dest.exists()) {
-            FileUtils.forceDelete(dest);
-        }
-        JarFile jarFile = new JarFile(file);
-        JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(dest));
-        Enumeration<JarEntry> enumeration = jarFile.entries();
-        while (enumeration.hasMoreElements()) {
-            JarEntry entry = enumeration.nextElement();
-            String name = entry.getName();
-            JarEntry outJarEntry = new JarEntry(name);
+        waitableExecutor.execute((Callable<Object>) () -> {
+            logger.log("Thread Name= " + Thread.currentThread().getName());
+            //不遍历jar，则直接退出
+            if (!getExtension().injectJar) {
+                FileUtils.copyFile(file, dest);
+                return null;
+            }
+            if (dest.exists()) {
+                FileUtils.forceDelete(dest);
+            }
+            JarFile jarFile = new JarFile(file);
+            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(dest));
+            Enumeration<JarEntry> enumeration = jarFile.entries();
+            while (enumeration.hasMoreElements()) {
+                JarEntry entry = enumeration.nextElement();
+                String name = entry.getName();
+                JarEntry outJarEntry = new JarEntry(name);
 
-            jarOutputStream.putNextEntry(outJarEntry);
-            byte[] modifiedClassBytes = null;
-            byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
-            if (name.endsWith(".class")) {
-                try {
-                    modifiedClassBytes = transformJar(sourceClassBytes, file, entry);
-                } catch (Throwable e) {
-                    e.printStackTrace();
+                jarOutputStream.putNextEntry(outJarEntry);
+                byte[] modifiedClassBytes = null;
+                byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
+                if (name.endsWith(".class")) {
+                    try {
+                        modifiedClassBytes = transformJar(sourceClassBytes, file, entry);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                        modifiedClassBytes = sourceClassBytes;
+                    }
+                }
+
+                if (modifiedClassBytes == null) {
                     modifiedClassBytes = sourceClassBytes;
                 }
-            }
+                jarOutputStream.write(modifiedClassBytes);
+                jarOutputStream.flush();
+                jarOutputStream.closeEntry();
 
-            if (modifiedClassBytes == null) {
-                modifiedClassBytes = sourceClassBytes;
             }
-            jarOutputStream.write(modifiedClassBytes);
-            jarOutputStream.flush();
-            jarOutputStream.closeEntry();
+            jarOutputStream.close();
+            jarFile.close();
+            return null;
+        });
 
-        }
-        jarOutputStream.close();
-        jarFile.close();
     }
 
     private void eachDir(TransformInvocation transformInvocation, boolean isIncremental, DirectoryInput directoryInput) {
@@ -323,16 +326,21 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     private static final String FILE_SEP = File.separator;
 
     public final void weaveSingleClassToFile(File inputFile, File outputFile) throws IOException {
-        if (inputFile.getName().endsWith(".class")) {
-            FileUtils.touch(outputFile);
-            byte[] classByte = FileUtils.readFileToByteArray(inputFile);
-            classByte = transform(classByte, inputFile);
-            FileUtils.writeByteArrayToFile(outputFile, classByte);
-        } else {
-            if (inputFile.isFile()) {
+        waitableExecutor.execute(() -> {
+            logger.log("Thread Name= " + Thread.currentThread().getName());
+            if (inputFile.getName().endsWith(".class")) {
                 FileUtils.touch(outputFile);
-                FileUtils.copyFile(inputFile, outputFile);
+                byte[] classByte = FileUtils.readFileToByteArray(inputFile);
+                classByte = transform(classByte, inputFile);
+                FileUtils.writeByteArrayToFile(outputFile, classByte);
+            } else {
+                if (inputFile.isFile()) {
+                    FileUtils.touch(outputFile);
+                    FileUtils.copyFile(inputFile, outputFile);
+                }
             }
-        }
+            return null;
+        });
+
     }
 }
