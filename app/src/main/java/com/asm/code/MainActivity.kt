@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun case2() {
-
+        case3();
     }
 
     fun case3() {

@@ -42,10 +42,6 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
         return classBytes;
     }
 
-    @Override
-    public boolean isIncremental() {
-        return false;
-    }
 
     @Override
     public byte[] transformJar(byte[] classBytes, File jarFile, JarEntry entry) {

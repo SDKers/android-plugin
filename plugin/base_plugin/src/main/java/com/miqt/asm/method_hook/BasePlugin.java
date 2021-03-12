@@ -34,6 +34,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
+import static com.android.build.api.transform.Status.CHANGED;
+
 
 public abstract class BasePlugin<E extends Extension> extends Transform implements Plugin<Project> {
 
@@ -103,27 +105,56 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         logger.init();
+        try {
+            beginTransform(transformInvocation);
+        } catch (Throwable e) {
+            e.printStackTrace();
+            logger.log(e);
+        }
+        try {
+            doTransform(transformInvocation);
+        } catch (Throwable e) {
+            e.printStackTrace();
+            logger.log(e);
+        }
+        try {
+            afterTransform(transformInvocation);
+        } catch (Throwable e) {
+            e.printStackTrace();
+            logger.log(e);
+        }
+        logger.release();
+    }
+
+    protected void afterTransform(TransformInvocation transformInvocation) {
+    }
+
+
+    protected void beginTransform(TransformInvocation transformInvocation) {
+    }
+
+
+    private void doTransform(TransformInvocation transformInvocation) {
         if (!getExtension().enable) {
             logger.log(getName() + " not enable!");
-            logger.release();
             return;
         }
         if (getExtension().justDebug) {
             String vn = transformInvocation.getContext().getVariantName();
             if (!"debug".equals(vn)) {
                 logger.log("Current build is " + vn + " type,[justDebug] not work in this.");
-                logger.release();
                 return;
             }
         }
         try {
             super.transform(transformInvocation);
             boolean isIncremental = transformInvocation.isIncremental();
-
+            logger.log("----------------------------------------------------------------");
             logger.log("ProjectName: " + transformInvocation.getContext().getProjectName());
             logger.log("ProjectPath: " + transformInvocation.getContext().getPath());
             logger.log("BuildType  : " + transformInvocation.getContext().getVariantName());
             logger.log("Incremental: " + isIncremental);
+            logger.log("extension  : " + extension.toString());
             logger.log("Time       : " + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()));
             logger.log("----------------------------------------------------------------");
 
@@ -137,67 +168,98 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                     eachDir(transformInvocation, isIncremental, directoryInput);
                 });
                 transformInput.getJarInputs().forEach(jarInput -> {
-                    eachJar(transformInvocation, jarInput);
+                    eachJar(transformInvocation, isIncremental, jarInput);
                 });
             });
         } catch (Throwable e) {
             e.printStackTrace();
             logger.log(e);
         }
-        logger.release();
     }
 
-    private void eachJar(TransformInvocation transformInvocation, JarInput jarInput) {
+    private void eachJar(TransformInvocation transformInvocation, boolean isIncremental, JarInput jarInput) {
         try {
             String jarName = jarInput.getName();
             File file = jarInput.getFile();
-            File temDir = transformInvocation.getContext().getTemporaryDir();
+//            File temDir = transformInvocation.getContext().getTemporaryDir();
             File dest = transformInvocation.getOutputProvider().getContentLocation(
                     jarInput.getFile().getAbsolutePath(),
                     jarInput.getContentTypes(),
                     jarInput.getScopes(),
                     Format.JAR);
-
-            if (!getExtension().injectJar) {
-                FileUtils.copyFile(file, dest);
-                return;
+            Status status;
+            if (isIncremental) {
+                status = jarInput.getStatus();
+            } else {
+                status = Status.CHANGED;
             }
-
-            JarFile jarFile = new JarFile(file);
-            File temJar = new File(temDir, file.getName());
-            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(temJar));
-            Enumeration<JarEntry> enumeration = jarFile.entries();
-            while (enumeration.hasMoreElements()) {
-                JarEntry entry = enumeration.nextElement();
-                String name = entry.getName();
-                JarEntry outJarEntry = new JarEntry(name);
-
-                jarOutputStream.putNextEntry(outJarEntry);
-                byte[] modifiedClassBytes = null;
-                byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
-                if (name.endsWith(".class")) {
-                    try {
-                        modifiedClassBytes = transformJar(sourceClassBytes, file, entry);
-                    } catch (Throwable e) {
-                        e.printStackTrace();
-                        modifiedClassBytes = sourceClassBytes;
+            logger.log("[JarInput]" + file.getAbsolutePath() + " status:" + status);
+            //根据是否变化决定是否更新
+            switch (status) {
+                case NOTCHANGED:
+                    break;
+                case REMOVED:
+                    if (dest.exists()) {
+                        FileUtils.forceDelete(dest);
                     }
-                }
-
-                if (modifiedClassBytes == null) {
-                    modifiedClassBytes = sourceClassBytes;
-                }
-                jarOutputStream.write(modifiedClassBytes);
-                jarOutputStream.flush();
-                jarOutputStream.closeEntry();
-
+                    break;
+                case ADDED:
+                case CHANGED:
+                    try {
+                        FileUtils.touch(dest);
+                    } catch (Throwable e) {
+                        File pr = dest.getParentFile();
+                        if (!pr.exists()) {
+                            pr.mkdirs();
+                        }
+                    }
+                    //不遍历jar，则直接退出
+                    if (!getExtension().injectJar) {
+                        FileUtils.copyFile(file, dest);
+                        break;
+                    }
+                    weaveSingleJarToFile(file, dest);
+                    break;
             }
-            jarOutputStream.close();
-            jarFile.close();
-            FileUtils.copyFile(temJar, dest);
         } catch (IOException e) {
             logger.log(e);
         }
+    }
+
+    private void weaveSingleJarToFile(File file, File dest) throws IOException {
+        if (dest.exists()) {
+            FileUtils.forceDelete(dest);
+        }
+        JarFile jarFile = new JarFile(file);
+        JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(dest));
+        Enumeration<JarEntry> enumeration = jarFile.entries();
+        while (enumeration.hasMoreElements()) {
+            JarEntry entry = enumeration.nextElement();
+            String name = entry.getName();
+            JarEntry outJarEntry = new JarEntry(name);
+
+            jarOutputStream.putNextEntry(outJarEntry);
+            byte[] modifiedClassBytes = null;
+            byte[] sourceClassBytes = IOUtils.toByteArray(jarFile.getInputStream(entry));
+            if (name.endsWith(".class")) {
+                try {
+                    modifiedClassBytes = transformJar(sourceClassBytes, file, entry);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    modifiedClassBytes = sourceClassBytes;
+                }
+            }
+
+            if (modifiedClassBytes == null) {
+                modifiedClassBytes = sourceClassBytes;
+            }
+            jarOutputStream.write(modifiedClassBytes);
+            jarOutputStream.flush();
+            jarOutputStream.closeEntry();
+
+        }
+        jarOutputStream.close();
+        jarFile.close();
     }
 
     private void eachDir(TransformInvocation transformInvocation, boolean isIncremental, DirectoryInput directoryInput) {
@@ -214,25 +276,26 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                     String destDirPath = dest.getAbsolutePath();
                     String destFilePath = file.getAbsolutePath().replace(srcDirPath, destDirPath);
                     File destFile = new File(destFilePath);
-                    getLogger().log(file.getName()+":"+status);
+                    logger.log("[DirectoryInput]" + file.getAbsolutePath() + " status:" + status.name());
                     switch (status) {
                         case NOTCHANGED:
                             break;
                         case REMOVED:
-                            com.android.utils.FileUtils.deleteIfExists(destFile);
+                            if (destFile.exists()) {
+                                FileUtils.forceDelete(destFile);
+                            }
                             break;
                         case ADDED:
                         case CHANGED:
-                            if (!file.getName().endsWith(".class")) {
-                                break;
-                            }
-                            byte[] bytes = FileUtils.readFileToByteArray(file);
                             try {
-                                byte[] resultBytes = transform(bytes, file);
-                                FileUtils.writeByteArrayToFile(file, resultBytes);
+                                FileUtils.touch(destFile);
                             } catch (Throwable e) {
-                                logger.log(e);
+                                File pr = destFile.getParentFile();
+                                if (!pr.exists()) {
+                                    pr.mkdirs();
+                                }
                             }
+                            weaveSingleClassToFile(file, destFile);
                             break;
 
                     }
@@ -240,14 +303,14 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                     logger.log(e);
                 }
             };
+            //当前是否是增量编译
             if (isIncremental) {
                 directoryInput.getChangedFiles().forEach(biConsumer);
             } else {
                 com.android.utils.FileUtils.getAllFiles(directoryInput.getFile()).forEach(file -> {
-                    biConsumer.accept(file, Status.CHANGED);
+                    biConsumer.accept(file, CHANGED);
                 });
             }
-            FileUtils.copyDirectory(directoryInput.getFile(), dest);
         } catch (IOException e) {
             logger.log(e);
         }
@@ -256,4 +319,20 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     public abstract byte[] transform(byte[] classBytes, File classFile);
 
     public abstract byte[] transformJar(byte[] classBytes, File jarFile, JarEntry entry);
+
+    private static final String FILE_SEP = File.separator;
+
+    public final void weaveSingleClassToFile(File inputFile, File outputFile) throws IOException {
+        if (inputFile.getName().endsWith(".class")) {
+            FileUtils.touch(outputFile);
+            byte[] classByte = FileUtils.readFileToByteArray(inputFile);
+            classByte = transform(classByte, inputFile);
+            FileUtils.writeByteArrayToFile(outputFile, classByte);
+        } else {
+            if (inputFile.isFile()) {
+                FileUtils.touch(outputFile);
+                FileUtils.copyFile(inputFile, outputFile);
+            }
+        }
+    }
 }
