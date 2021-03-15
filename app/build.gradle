@@ -9,6 +9,7 @@ apply plugin: 'com.miqt.plugin.sample'
 hook_method {
     classWhiteListRegex = [".*"]
     impl = "com.asm.code.MethodHookPrint"
+    runVariant = "debug"
 }
 
 android {

@@ -22,9 +22,15 @@ public class HookMethodPlugin extends BasePlugin<HookMethodExtension> {
     }
 
     @Override
-    public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
+    protected void beginTransform(TransformInvocation transformInvocation) {
+        super.beginTransform(transformInvocation);
+        getLogger().log("HookMethodPlugin:start");
+    }
 
-        super.transform(transformInvocation);
+    @Override
+    protected void afterTransform(TransformInvocation transformInvocation) {
+        super.afterTransform(transformInvocation);
+        getLogger().log("HookMethodPlugin:end");
     }
 
     @Override

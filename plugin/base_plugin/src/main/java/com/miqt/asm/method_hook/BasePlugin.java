@@ -47,6 +47,8 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     private Logger logger;
     private E extension;
     private WaitableExecutor waitableExecutor;
+    //某些情况下不需要执行插桩，直接复制文件即可
+    boolean isNotRun = false;
 
     @Override
     public void apply(@NotNull Project project) {
@@ -111,7 +113,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
         if (extension.buildLog) {
             logger.init();
         }
-        logger.log("多线程编译已经打开，目前并发处理数：" + waitableExecutor.getParallelism());
         try {
             beginTransform(transformInvocation);
             doTransform(transformInvocation);
@@ -134,29 +135,32 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
 
     private void doTransform(TransformInvocation transformInvocation) {
+        isNotRun = false;
         if (!getExtension().enable) {
             logger.log(getName() + " not enable!");
-            return;
+            isNotRun = true;
         }
-        if (getExtension().justDebug) {
-            String vn = transformInvocation.getContext().getVariantName();
-            if (!"debug".equals(vn)) {
-                logger.log("Current build is " + vn + " type,[justDebug] not work in this.");
-                return;
+        String vn = transformInvocation.getContext().getVariantName();
+        if (!isNotRun && !getExtension().runVariant.toLowerCase().equals(RunVariant.ALWAYS.name().toLowerCase())) {
+            //目标环境与当前环境不相等，或，当前环境是从不运行。
+            isNotRun = !getExtension().runVariant.toLowerCase().equals(transformInvocation.getContext().getVariantName().toLowerCase())
+                    || getExtension().runVariant.toLowerCase().equals(RunVariant.NEVER.name().toLowerCase());
+            if (isNotRun) {
+                logger.log("Current build type is " + vn + ". Not match runVariant = " + getExtension().runVariant);
             }
         }
         try {
             super.transform(transformInvocation);
             boolean isIncremental = transformInvocation.isIncremental();
             logger.log("----------------------------------------------------------------");
-            logger.log("ProjectName: " + transformInvocation.getContext().getProjectName());
+            logger.log("ProjectName: " + project.getName());
             logger.log("ProjectPath: " + transformInvocation.getContext().getPath());
-            logger.log("BuildType  : " + transformInvocation.getContext().getVariantName());
+            logger.log("BuildType  : " + vn);
             logger.log("Incremental: " + isIncremental);
             logger.log("extension  : " + extension.toString());
             logger.log("Time       : " + new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()));
             logger.log("----------------------------------------------------------------");
-
+            logger.log("多线程编译已经打开，目前并发处理数：" + waitableExecutor.getParallelism());
             //如果非增量，则清空旧的输出内容
             if (!isIncremental) {
                 transformInvocation.getOutputProvider().deleteAll();
@@ -212,8 +216,11 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                             pr.mkdirs();
                         }
                     }
-
-                    weaveSingleJarToFile(file, dest);
+                    if (isNotRun) {
+                        FileUtils.copyFile(file, dest);
+                    } else {
+                        weaveSingleJarToFile(file, dest);
+                    }
                     break;
             }
         } catch (IOException e) {
@@ -330,7 +337,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     public final void weaveSingleClassToFile(File inputFile, File outputFile) throws IOException {
         waitableExecutor.execute(() -> {
             logger.log("Thread Name= " + Thread.currentThread().getName());
-            if (inputFile.getName().endsWith(".class")) {
+            if (!isNotRun && inputFile.getName().endsWith(".class")) {
                 FileUtils.touch(outputFile);
                 byte[] classByte = FileUtils.readFileToByteArray(inputFile);
                 classByte = transform(classByte, inputFile);

@@ -13,13 +13,14 @@ public class HookMethodExtension extends Extension {
     //方法hook调用实现类
     public String impl = "";
 
+
     @Override
     public String toString() {
         return "HookMethodExtension{" +
                 "classWhiteListRegex=" + classWhiteListRegex +
                 ", impl='" + impl + '\'' +
                 ", enable=" + enable +
-                ", justDebug=" + justDebug +
+                ", runVariant=" + runVariant +
                 ", injectJar=" + injectJar +
                 ", buildLog=" + buildLog +
                 '}';

@@ -25,7 +25,7 @@ public class Logger {
         if (init) {
             return;
         }
-        init = true;
+
         if (writer != null) {
             return;
         }
@@ -47,6 +47,7 @@ public class Logger {
             FileOutputStream stream = new FileOutputStream(logFile, false);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(stream);
             writer = new BufferedWriter(outputStreamWriter);
+            init = true;
         } catch (Throwable e) {
             e.printStackTrace();
         }
