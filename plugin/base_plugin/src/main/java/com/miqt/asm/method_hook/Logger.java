@@ -14,6 +14,7 @@ public class Logger {
     String dir;
     String name;
     BufferedWriter writer;
+    boolean init = false;
 
     public Logger(String dir, String name) {
         this.dir = dir;
@@ -21,7 +22,11 @@ public class Logger {
     }
 
     void init() {
-        if (writer != null){
+        if (init) {
+            return;
+        }
+        init = true;
+        if (writer != null) {
             return;
         }
         try {
@@ -48,6 +53,9 @@ public class Logger {
     }
 
     void release() {
+        if (!init) {
+            return;
+        }
         if (writer == null) {
             return;
         }
@@ -61,6 +69,9 @@ public class Logger {
     }
 
     public void log(String message) {
+        if (!init) {
+            return;
+        }
         try {
             writer.write(message);
             writer.newLine();
@@ -71,6 +82,9 @@ public class Logger {
 
 
     public void log(Throwable throwable) {
+        if (!init) {
+            return;
+        }
         try {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -83,6 +97,9 @@ public class Logger {
     }
 
     public void print(String message) {
+        if (!init) {
+            return;
+        }
         System.out.println(message);
     }
 }

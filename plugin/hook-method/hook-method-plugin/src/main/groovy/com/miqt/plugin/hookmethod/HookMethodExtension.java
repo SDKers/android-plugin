@@ -16,13 +16,15 @@ public class HookMethodExtension extends Extension {
     @Override
     public String toString() {
         return "HookMethodExtension{" +
-                ", classWhiteListRegexs=" + classWhiteListRegex +
-                ", injectJar=" + injectJar +
+                "classWhiteListRegex=" + classWhiteListRegex +
                 ", impl='" + impl + '\'' +
                 ", enable=" + enable +
                 ", justDebug=" + justDebug +
+                ", injectJar=" + injectJar +
+                ", buildLog=" + buildLog +
                 '}';
     }
+
     @Override
     public String getExtensionName() {
         return "hook_method";

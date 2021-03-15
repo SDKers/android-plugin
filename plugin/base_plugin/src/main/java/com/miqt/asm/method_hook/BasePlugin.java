@@ -108,7 +108,9 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
 
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
-        logger.init();
+        if (extension.buildLog) {
+            logger.init();
+        }
         logger.log("多线程编译已经打开，目前并发处理数：" + waitableExecutor.getParallelism());
         try {
             beginTransform(transformInvocation);
