@@ -64,6 +64,7 @@ public class Logger {
             writer.flush();
             writer.close();
             writer = null;
+            init = false;
         } catch (IOException e) {
             e.printStackTrace();
         }

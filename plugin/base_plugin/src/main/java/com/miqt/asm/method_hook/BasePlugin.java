@@ -36,7 +36,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
-import static com.android.build.api.transform.Status.CHANGED;
+import static com.android.build.api.transform.Status.ADDED;
 
 
 public abstract class BasePlugin<E extends Extension> extends Transform implements Plugin<Project> {
@@ -53,7 +53,6 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void apply(@NotNull Project project) {
         this.project = project;
-        logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
         BaseExtension android = (BaseExtension) project.getExtensions().getByName("android");
         if (android instanceof AppExtension) {
             isApp = true;
@@ -84,6 +83,9 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     }
 
     public Logger getLogger() {
+        if (logger == null) {
+            logger = new Logger(project.getBuildDir().getAbsolutePath() + "/plugin/", getName() + ".log");
+        }
         return logger;
     }
 
@@ -111,7 +113,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     @Override
     public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
         if (extension.buildLog) {
-            logger.init();
+            getLogger().init();
         }
         try {
             beginTransform(transformInvocation);
@@ -119,11 +121,11 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
             afterTransform(transformInvocation);
         } catch (Throwable e) {
             e.printStackTrace();
-            logger.log(e);
+            getLogger().log(e);
         }
 
         waitableExecutor.waitForAllTasks();
-        logger.release();
+        getLogger().release();
     }
 
     protected void afterTransform(TransformInvocation transformInvocation) {
@@ -137,7 +139,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     private void doTransform(TransformInvocation transformInvocation) {
         isNotRun = false;
         if (!getExtension().enable) {
-            logger.log(getName() + " not enable!");
+            getLogger().log(getName() + " not enable!");
             isNotRun = true;
         }
         String vn = transformInvocation.getContext().getVariantName();
@@ -194,7 +196,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
             if (isIncremental) {
                 status = jarInput.getStatus();
             } else {
-                status = Status.CHANGED;
+                status = Status.ADDED;
             }
             logger.log("[JarInput]" + file.getAbsolutePath() + " status:" + status);
             //根据是否变化决定是否更新
@@ -316,7 +318,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                 directoryInput.getChangedFiles().forEach(biConsumer);
             } else {
                 com.android.utils.FileUtils.getAllFiles(directoryInput.getFile()).forEach(file -> {
-                    biConsumer.accept(file, CHANGED);
+                    biConsumer.accept(file, ADDED);
                 });
             }
         } catch (IOException e) {
