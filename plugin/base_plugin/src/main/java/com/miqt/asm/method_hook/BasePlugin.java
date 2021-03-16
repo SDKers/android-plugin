@@ -216,11 +216,7 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
                             pr.mkdirs();
                         }
                     }
-                    if (isNotRun) {
-                        FileUtils.copyFile(file, dest);
-                    } else {
-                        weaveSingleJarToFile(file, dest);
-                    }
+                    weaveSingleJarToFile(file, dest);
                     break;
             }
         } catch (IOException e) {
@@ -231,13 +227,13 @@ public abstract class BasePlugin<E extends Extension> extends Transform implemen
     private void weaveSingleJarToFile(File file, File dest) throws IOException {
         waitableExecutor.execute((Callable<Object>) () -> {
             logger.log("Thread Name= " + Thread.currentThread().getName());
-            //不遍历jar，则直接退出
-            if (!getExtension().injectJar) {
-                FileUtils.copyFile(file, dest);
-                return null;
-            }
             if (dest.exists()) {
                 FileUtils.forceDelete(dest);
+            }
+            //不遍历jar，则直接退出
+            if (!getExtension().injectJar||isNotRun) {
+                FileUtils.copyFile(file, dest);
+                return null;
             }
             JarFile jarFile = new JarFile(file);
             JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(dest));

@@ -4,12 +4,14 @@ plugins {
 }
 
 apply plugin: 'com.miqt.plugin.hookmethod'
-apply plugin: 'com.miqt.plugin.sample'
+//apply plugin: 'com.miqt.plugin.sample'
 
 hook_method {
     classWhiteListRegex = [".*"]
     impl = "com.asm.code.MethodHookPrint"
-    runVariant = "debug"
+    buildLog = true
+    injectJar = true
+//    runVariant = "debug"
 }
 
 android {
